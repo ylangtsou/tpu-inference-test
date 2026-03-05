@@ -70,7 +70,7 @@ def get_version():
 
 
 setup(
-    name="tpu_inference",
+    name="test-tpu",
     version=get_version(),
     description="",
     long_description=open("README.md").read() if hasattr(
