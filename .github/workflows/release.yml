@@ -1,0 +1,73 @@
+name: Publish Package to PyPI/TestPyPI
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+    branches:
+      - 'main'
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: 'Target PyPI repository URL'
+        required: false
+        default: 'https://test.pypi.org/legacy/'
+      release_type:
+        description: 'Release type (Enter nightly or stable)'
+        required: true
+        default: "nightly"
+      version:
+        description: "Version"
+        required: true
+        default: "0.1.0"
+
+
+jobs:
+  pypi_publish:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Determine Release Type and Version
+      id: vars
+      env:
+          GH_EVENT_NAME: ${{ github.event_name }}
+          INPUT_RELEASE_TYPE: ${{ inputs.release_type }}
+          INPUT_VERSION: ${{ inputs.version }}
+          GH_REF_NAME: ${{ github.ref_name }}
+          GH_REF: ${{ github.ref }}
+      run: bash .github/scripts/determine_release_vars.sh
+
+    - name: Install dependencies (build)
+      run:
+        python3 -m pip install build
+
+    - name: Build package (sdist and wheel)
+      env:
+          RELEASE_TYPE: ${{ steps.vars.outputs.RELEASE_TYPE }}
+          VERSION: ${{ steps.vars.outputs.VERSION }}
+      run: python3 -m build
+
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: ${{ github.event_name == 'workflow_dispatch' && inputs.repository || 'https://test.pypi.org/legacy/' }}
+
+    - name: Publish completed message
+      run: echo "---Build and publish completed successfully.---"
