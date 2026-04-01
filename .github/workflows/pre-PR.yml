@@ -1,5 +1,5 @@
 name: Apply Conditional PR Template
-
+# Trigger test
 on:
   pull_request_target:
     types: [opened, reopened]
