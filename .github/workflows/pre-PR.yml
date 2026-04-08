@@ -71,6 +71,7 @@ jobs:
       - name: ORIGIN Update PR body
         if: env.TEMPLATE_CONTENT != ''
         uses: peter-evans/create-or-update-comment@v4
+        continue-on-error: true
         with:
            issue-number: ${{ github.event.pull_request.number }}
            body: ${{ env.TEMPLATE_CONTENT }}
@@ -90,12 +91,12 @@ jobs:
 
           echo "Response code: $RESPONSE"
 
-#  if [ "$RESPONSE" -eq 403 ]; then
-#             echo "403 received, skipping..."
-#             exit 0
-#           elif [ "$RESPONSE" -eq 200 ]; then
-#             echo "✅ Passed"
-#           else
-#             echo "❌ Unexpected response: $RESPONSE"
-#             exit 1
-#           fi        
+          if [ "$RESPONSE" -eq 403 ]; then
+            echo "403 received, skipping..."
+            exit 0
+          elif [ "$RESPONSE" -eq 200 ]; then
+            echo "✅ Passed"
+          else
+            echo "❌ Unexpected response: $RESPONSE"
+            exit 1
+          fi
