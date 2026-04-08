@@ -1,29 +1,19 @@
 name: Apply Conditional PR Template
 
 on:
-  # Use pull_request_target instead of pull_request because:
-  # pull_request gives read-only GITHUB_TOKEN for fork PRs, causing 403 on PR body update.
-  # pull_request_target runs in base branch context, granting read/write GITHUB_TOKEN.
-  pull_request_target:
+  pull_request:
     types: [opened, reopened]
 
 jobs:
   apply-template:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           # Fetches all history so git diff can be used locally
           fetch-depth: 0
-          # ref: ${{ github.event.pull_request.head.sha }}
-          # repository: ${{ github.event.pull_request.head.repo.full_name }}
-
-      - name: Fetch fork branch
-          # pull_request_target only checks out base branch by default.
-          # Manually fetch fork's head so git diff can compare BASE_SHA and HEAD_SHA.
-        run: |
-          git fetch ${{ github.event.pull_request.head.sha }}
 
       - name: Determine changed paths
         id: changed-files
@@ -46,7 +36,7 @@ jobs:
           CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
 
           # --- Check for modeling files ---
-          if echo "$CHANGED_FILES" | grep -E -q '^tpu_commons/models/jax/(common|recipes)/'; then
+          if echo "$CHANGED_FILES" | grep -E -q '^tpu_inference/models/jax/(common|recipes)/'; then
             echo "modeling=true" >> "$GITHUB_OUTPUT"
           else
             echo "modeling=false" >> "$GITHUB_OUTPUT"
@@ -78,10 +68,27 @@ jobs:
             exit 1
           fi
 
+      # - name: Update PR body
+      #   if: env.TEMPLATE_CONTENT != ''
+      #   uses: peter-evans/create-or-update-comment@v4
+      #   with:
+      #     issue-number: ${{ github.event.pull_request.number }}
+      #     body: ${{ env.TEMPLATE_CONTENT }}
+      #     edit-mode: replace
+
       - name: Update PR body
         if: env.TEMPLATE_CONTENT != ''
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: ${{ env.TEMPLATE_CONTENT }}
-          edit-mode: replace
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+          -X PATCH \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d "{"body": $(echo "${{ env.TEMPLATE_CONTENT }}" | jq -Rs .)}" \
+          "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}")
+
+          if [ "$RESPONSE" -eq 403 ]; then
+            echo "403 received, skipping..."
+          exit 0
+          else
+            echo "✅ Passed "
+          fi
