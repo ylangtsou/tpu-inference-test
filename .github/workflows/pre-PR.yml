@@ -78,14 +78,12 @@ jobs:
 
       - name: Update PR body
         if: env.TEMPLATE_CONTENT != ''
-        env:
-          TEMPLATE_CONTENT: ${{ env.TEMPLATE_CONTENT }}
         run: |
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
           -X PATCH \
           -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
           -H "Content-Type: application/json" \
-          -d "{"body": $(echo "$TEMPLATE_CONTENT" | jq -Rs .)}" \
+          -d "{"body": $(echo "${{ env.TEMPLATE_CONTENT }}" | jq -Rs .)}" \
           "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}")
 
           if [ "$RESPONSE" -eq 403 ]; then
