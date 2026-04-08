@@ -1,5 +1,5 @@
 name: Apply Conditional PR Template
-
+# Test
 on:
   pull_request:
     types: [opened, reopened]
@@ -7,7 +7,6 @@ on:
 jobs:
   apply-template:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
