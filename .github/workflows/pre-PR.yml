@@ -82,7 +82,7 @@ jobs:
         env:
           TEMPLATE_CONTENT: ${{ env.TEMPLATE_CONTENT }}
         run: |
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+          RESPONSE=$(curl -s \
            -X POST \
            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
            -H "Content-Type: application/json" \
