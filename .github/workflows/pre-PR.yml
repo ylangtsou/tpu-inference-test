@@ -75,20 +75,19 @@ jobs:
       #     issue-number: ${{ github.event.pull_request.number }}
       #     body: ${{ env.TEMPLATE_CONTENT }}
       #     edit-mode: replace
+      # BODY=$(echo "$TEMPLATE_CONTENT" | jq -Rs '{"body": .}')
 
       - name: Update PR body
         if: env.TEMPLATE_CONTENT != ''
         env:
           TEMPLATE_CONTENT: ${{ env.TEMPLATE_CONTENT }}
         run: |
-          BODY=$(echo "$TEMPLATE_CONTENT" | jq -Rs '{"body": .}')
-
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}"
-            -X PATCH \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "$BODY" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}")
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+           -X PATCH \
+           -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+           -H "Content-Type: application/json" \
+           -d "{"body": $(echo "$TEMPLATE_CONTENT" | jq -Rs .)}" \
+           "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}")
 
           echo "Response code: $RESPONSE"
 
