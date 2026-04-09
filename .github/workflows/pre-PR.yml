@@ -78,29 +78,65 @@ jobs:
            edit-mode: replace
 
       - name: Update PR body
-        if: env.TEMPLATE_CONTENT != ''
-        env:
-          TEMPLATE_CONTENT: ${{ env.TEMPLATE_CONTENT }}
         run: |
-          RESPONSE=$(curl -s \
-           -X POST \
-           -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-           -H "Content-Type: application/json" \
-           -d "{"body": $(echo "$TEMPLATE_CONTENT" | jq -Rs .)}" \
-           "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments")
+          BODY=$(jq -n --arg body "$TEMPLATE_CONTENT" '{body: $body}')
 
-          echo "Response code: $RESPONSE"
-          COMMENT_ID=$(echo "$RESPONSE" | jq -r '.id')
-          ISSUE_NUMBER=$(echo "$RESPONSE" | jq -r '.issue_url' | awk -F'/' '{print $NF}')
+          # 存 response
+          HTTP_RESPONSE=$(mktemp)
 
-          echo "Created comment id '$COMMENT_ID' on issue '$ISSUE_NUMBER'."
+          # 分開拿 status
+          HTTP_CODE=$(curl -s -o "$HTTP_RESPONSE" -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments")
 
-          if [ "$RESPONSE" -eq 403 ]; then
-            echo "403 received, skipping..."
-            exit 0
-          elif [ "$RESPONSE" -eq 200 ]; then
+          echo "Status: $HTTP_CODE"
+          echo "Response:"
+          cat "$HTTP_RESPONSE"
+
+          # ✅ 正確判斷
+          if [ "$HTTP_CODE" -eq 201 ]; then
+            COMMENT_ID=$(jq -r '.id' "$HTTP_RESPONSE")
+            ISSUE_NUMBER=${{ github.event.pull_request.number }}
+
+            echo "Created comment id '$COMMENT_ID' on issue '$ISSUE_NUMBER'."
             echo "✅ Passed"
+
+          elif [ "$HTTP_CODE" -eq 403 ]; then
+            echo "⚠️ 403 permission denied, skipping"
+            exit 0
+
           else
-            echo "❌ Unexpected response: $RESPONSE"
+            echo "❌ Unexpected error, Error: $HTTP_RESPONSE"
             exit 1
           fi
+
+      # - name: Update PR body
+      #   if: env.TEMPLATE_CONTENT != ''
+      #   env:
+      #     TEMPLATE_CONTENT: ${{ env.TEMPLATE_CONTENT }}
+      #   run: |
+      #     RESPONSE=$(curl -s \
+      #      -X POST \
+      #      -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+      #      -H "Content-Type: application/json" \
+      #      -d "{"body": $(echo "$TEMPLATE_CONTENT" | jq -Rs .)}" \
+      #      "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments")
+
+      #     echo "Response code: $RESPONSE"
+      #     COMMENT_ID=$(echo "$RESPONSE" | jq -r '.id')
+      #     ISSUE_NUMBER=$(echo "$RESPONSE" | jq -r '.issue_url' | awk -F'/' '{print $NF}')
+
+      #     echo "Created comment id '$COMMENT_ID' on issue '$ISSUE_NUMBER'."
+
+      #     if [ "$RESPONSE" -eq 403 ]; then
+      #       echo "403 received, skipping..."
+      #       exit 0
+      #     elif [ "$RESPONSE" -eq 200 ]; then
+      #       echo "✅ Passed"
+      #     else
+      #       echo "❌ Unexpected response: $RESPONSE"
+      #       exit 1
+      #     fi
