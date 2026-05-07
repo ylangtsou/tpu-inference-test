@@ -11,7 +11,6 @@ jobs:
           echo "Current Actor: ${{ github.actor }}"
           echo "Admin Permission: ${{ github.event.sender.permissions.admin }}"
 
-jobs:
   admin-task1:
     runs-on: ubuntu-latest
     if: ${{ github.event.sender.permissions.admin == true }}
@@ -20,7 +19,6 @@ jobs:
       - name: Run Admin Task
         run: echo "Hello Admin, you are authorized."
 
-jobs:
   admin-task2:
     runs-on: ubuntu-latest
     if: github.event.sender.permissions.admin == true
