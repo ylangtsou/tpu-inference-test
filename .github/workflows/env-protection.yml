@@ -1,0 +1,17 @@
+name: Manual Production Deployment
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # If "production" has "Required reviewers" enabled, this job will pause 
+    # and wait for Admin approval before executing the steps below.
+    environment: production
+    
+    steps:
+      - name: Execution Step
+        run: |
+          echo "Authorization successful."
+          echo "Triggered by: ${{ github.actor }}"

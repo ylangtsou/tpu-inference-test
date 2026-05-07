@@ -1,0 +1,13 @@
+name: Manual Admin Only Workflow
+
+on:
+  workflow_dispatch:
+
+jobs:
+  admin-task:
+    runs-on: ubuntu-latest
+    if: github.event.sender.permissions.admin == true
+    
+    steps:
+      - name: Run Admin Task
+        run: echo "Hello Admin, you are authorized."
